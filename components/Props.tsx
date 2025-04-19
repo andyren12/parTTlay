@@ -4,7 +4,7 @@ import { collection, doc, getDocs } from "firebase/firestore";
 import { useEffect, useState } from "react";
 import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { ScrollView } from "react-native-gesture-handler";
-import { useSetRecoilState } from "recoil";
+import { useRecoilState } from "recoil";
 
 type Prop = {
   name: string;
@@ -13,20 +13,54 @@ type Prop = {
 };
 
 type Line = {
-  [title: string]: {
-    line: number;
-    wagers: Wager[];
-  };
+  id: string;
+  propId: string;
+  line: number;
+  title: string;
+  wagers: Wager[];
 };
 
 type Wager = {
   name: string;
   amount: number;
+  over: boolean;
 };
 
 export default function Props() {
   const [props, setProps] = useState<Prop[]>([]);
-  const setSelectedBet = useSetRecoilState(selectedBetState);
+  const [selectedBet, setSelectedBet] = useRecoilState(selectedBetState);
+
+  function calculateOdds(wagers: Wager[]) {
+    if (wagers) {
+      const overTotal = wagers
+        .filter((w) => w.over)
+        .reduce((sum, w) => sum + w.amount, 0);
+
+      const underTotal = wagers
+        .filter((w) => !w.over)
+        .reduce((sum, w) => sum + w.amount, 0);
+
+      let overOdds = 0;
+      let underOdds = 0;
+
+      if (overTotal > 0 && underTotal > 0) {
+        overOdds = +(underTotal / overTotal).toFixed(2);
+        underOdds = +(overTotal / underTotal).toFixed(2);
+      } else if (overTotal > 0 && underTotal === 0) {
+        overOdds = 0;
+        underOdds = overTotal;
+      } else if (underTotal > 0 && overTotal === 0) {
+        overOdds = underTotal;
+        underOdds = 0;
+      }
+
+      return { overOdds, underOdds };
+    }
+    return {
+      overOdds: 1,
+      underOdds: 1,
+    };
+  }
 
   useEffect(() => {
     const fetchLines = async () => {
@@ -54,7 +88,11 @@ export default function Props() {
         </View>
         <View>
           {pledge.lines.map((lineObj, index) => {
-            const [title, data] = Object.entries(lineObj)[0];
+            const selected = selectedBet.find(
+              (b) => b.name === pledge.name && b.title === lineObj.title
+            );
+
+            const { overOdds, underOdds } = calculateOdds(lineObj.wagers);
 
             return (
               <View
@@ -65,29 +103,64 @@ export default function Props() {
                 }}
               >
                 <View style={styles.line}>
-                  <Text>{data.line}</Text>
-                  <Text>{title}</Text>
+                  <Text>{lineObj.line}</Text>
+                  <Text>{lineObj.title}</Text>
                 </View>
                 <View style={{ flexDirection: "row", marginRight: 10 }}>
                   <TouchableOpacity
-                    style={styles.button}
+                    style={[
+                      styles.button,
+                      selected?.status === "Over" && {
+                        backgroundColor: "lightgray",
+                      },
+                    ]}
                     onPress={() =>
                       setSelectedBet((prev) => [
-                        ...(prev || []),
+                        ...(prev || []).filter((b) => b.name !== pledge.name),
                         {
+                          id: lineObj.id,
+                          propId: lineObj.propId,
                           name: pledge.name,
                           picture: pledge.picture,
-                          title: title,
+                          title: lineObj.title,
                           status: "Over",
-                          line: data.line,
+                          line: lineObj.line,
+                          odds: overOdds,
                         },
                       ])
                     }
                   >
                     <Text>Over</Text>
+                    {overOdds !== 1 && (
+                      <Text style={{ textAlign: "center" }}>{overOdds}x</Text>
+                    )}
                   </TouchableOpacity>
-                  <TouchableOpacity style={styles.button}>
+                  <TouchableOpacity
+                    style={[
+                      styles.button,
+                      selected?.status === "Under" && {
+                        backgroundColor: "lightgray",
+                      },
+                    ]}
+                    onPress={() =>
+                      setSelectedBet((prev) => [
+                        ...(prev || []).filter((b) => b.name !== pledge.name),
+                        {
+                          id: lineObj.id,
+                          name: pledge.name,
+                          picture: pledge.picture,
+                          title: lineObj.title,
+                          status: "Under",
+                          line: lineObj.line,
+                          odds: underOdds,
+                        },
+                      ])
+                    }
+                  >
                     <Text>Under</Text>
+                    {underOdds !== 1 && (
+                      <Text style={{ textAlign: "center" }}>{underOdds}x</Text>
+                    )}
                   </TouchableOpacity>
                 </View>
               </View>

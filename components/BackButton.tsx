@@ -16,5 +16,6 @@ const styles = StyleSheet.create({
     top: 60,
     left: 10,
     padding: 10,
+    zIndex: 999,
   },
 });

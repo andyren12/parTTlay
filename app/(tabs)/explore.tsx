@@ -7,7 +7,6 @@ import {
 } from "react-native";
 import { useAuth } from "@/hooks/useAuth";
 import { router } from "expo-router";
-import Lines from "@/components/Props";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import Props from "@/components/Props";
 
@@ -18,7 +17,13 @@ export default function Explore() {
   const deposit = () => {
     router.push("/deposit");
   };
-  console.log(user?.balance);
+
+  type Wager = {
+    name: string;
+    amount: number;
+    over: boolean;
+  };
+
   return (
     <SafeAreaView style={styles.main}>
       <TouchableOpacity style={styles.balanceButton} onPress={deposit}>
@@ -45,6 +50,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
     paddingVertical: 10,
     borderRadius: 10,
+    zIndex: 999,
   },
   cards: {
     width: "100%",

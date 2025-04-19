@@ -1,25 +1,43 @@
 // components/Bets.tsx
-import { View, Text, StyleSheet, Image } from "react-native";
+import { View, Text, StyleSheet, Image, TouchableOpacity } from "react-native";
 import { useRecoilState } from "recoil";
 import { selectedBetState } from "@/recoil/atoms";
+import { router, usePathname } from "expo-router";
+
+type Bet = {
+  name: string;
+  picture: string;
+  title: string;
+  status: string;
+  line: number;
+};
 
 export default function Bets() {
   const [selectedBet, setSelectedBet] = useRecoilState(selectedBetState);
 
+  const pathname = usePathname();
+  const hideOnScreens = ["/track", "/deposit", "/authScreen"];
+
+  if (hideOnScreens.includes(pathname)) {
+    return null;
+  }
+
   return (
-    <View style={styles.modal}>
-      {selectedBet.map((bet) => {
-        return (
-          <View key={bet.name}>
-            <Image
-              style={styles.pic}
-              source={{ uri: bet.picture }}
-              resizeMode="contain"
-            />
-          </View>
-        );
-      })}
-    </View>
+    <TouchableOpacity onPress={() => router.push("/track")}>
+      <View style={styles.modal}>
+        {selectedBet.map((bet) => {
+          return (
+            <View key={bet.name}>
+              <Image
+                style={styles.pic}
+                source={{ uri: bet.picture }}
+                resizeMode="contain"
+              />
+            </View>
+          );
+        })}
+      </View>
+    </TouchableOpacity>
   );
 }
 

@@ -36,16 +36,8 @@ export default function RootLayout() {
 
   return (
     <RecoilRoot>
-      <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
-        {/* <Stack>
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen name="+not-found" />
-          <Stack.Screen name="authScreen" options={{ headerShown: false }} />
-          <Stack.Screen name="deposit" options={{ headerShown: false }} />
-        </Stack> */}
-        <LayoutWithModal />
-        <StatusBar style="auto" />
-      </ThemeProvider>
+      <LayoutWithModal />
+      <StatusBar style="auto" />
     </RecoilRoot>
   );
 }
@@ -60,6 +52,7 @@ function LayoutWithModal() {
         <Stack.Screen name="+not-found" />
         <Stack.Screen name="authScreen" options={{ headerShown: false }} />
         <Stack.Screen name="deposit" options={{ headerShown: false }} />
+        <Stack.Screen name="track" options={{ headerShown: false }} />
       </Stack>
 
       {selectedBet && <Bets />}
