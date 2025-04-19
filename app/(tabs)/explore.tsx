@@ -7,6 +7,9 @@ import {
 } from "react-native";
 import { useAuth } from "@/hooks/useAuth";
 import { router } from "expo-router";
+import Lines from "@/components/Props";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
+import Props from "@/components/Props";
 
 export default function Explore() {
   const { user, loading } = useAuth();
@@ -21,6 +24,9 @@ export default function Explore() {
       <TouchableOpacity style={styles.balanceButton} onPress={deposit}>
         <Text>{(user?.balance ?? 0).toFixed(2)}+</Text>
       </TouchableOpacity>
+      <GestureHandlerRootView style={styles.cards}>
+        <Props />
+      </GestureHandlerRootView>
     </SafeAreaView>
   );
 }
@@ -39,5 +45,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
     paddingVertical: 10,
     borderRadius: 10,
+  },
+  cards: {
+    width: "100%",
   },
 });

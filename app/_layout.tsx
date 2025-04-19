@@ -9,8 +9,11 @@ import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
 import "react-native-reanimated";
+import { RecoilRoot, useRecoilValue } from "recoil";
+import { selectedBetState } from "@/recoil/atoms";
 
 import { useColorScheme } from "@/hooks/useColorScheme";
+import Bets from "@/components/Bets";
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -32,14 +35,34 @@ export default function RootLayout() {
   }
 
   return (
-    <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
+    <RecoilRoot>
+      <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
+        {/* <Stack>
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen name="+not-found" />
+          <Stack.Screen name="authScreen" options={{ headerShown: false }} />
+          <Stack.Screen name="deposit" options={{ headerShown: false }} />
+        </Stack> */}
+        <LayoutWithModal />
+        <StatusBar style="auto" />
+      </ThemeProvider>
+    </RecoilRoot>
+  );
+}
+
+function LayoutWithModal() {
+  const selectedBet = useRecoilValue(selectedBetState);
+
+  return (
+    <>
       <Stack>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="+not-found" />
         <Stack.Screen name="authScreen" options={{ headerShown: false }} />
         <Stack.Screen name="deposit" options={{ headerShown: false }} />
       </Stack>
-      <StatusBar style="auto" />
-    </ThemeProvider>
+
+      {selectedBet && <Bets />}
+    </>
   );
 }
