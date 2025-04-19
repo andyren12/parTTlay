@@ -1,74 +1,124 @@
-import { Image, StyleSheet, Platform } from 'react-native';
-
-import { HelloWave } from '@/components/HelloWave';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
+import { useAuth } from "@/hooks/useAuth";
+import {
+  Button,
+  Image,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+  Alert,
+} from "react-native";
+import { signOut } from "firebase/auth";
+import { auth, db } from "../../firebaseConfig";
+import { useRouter } from "expo-router";
+import { useState, useEffect } from "react";
+import * as ImagePicker from "expo-image-picker";
+import { doc, updateDoc } from "firebase/firestore";
 
 export default function HomeScreen() {
+  const { user, loading } = useAuth();
+  const router = useRouter();
+  const [profileImage, setProfileImage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (user?.profilePicture) {
+      setProfileImage(user.profilePicture);
+    }
+  }, [user]);
+
+  const pickAndUploadImage = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.7,
+    });
+
+    if (result.canceled || !result.assets.length) return;
+
+    const asset = result.assets[0];
+    const fileName = `profile-${Date.now()}.jpg`;
+    const fileType = "image/jpeg";
+
+    try {
+      // Step 1: Request a presigned URL from the backend
+      const res = await fetch("http://localhost:3001/api/getPresignedUrl", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fileName, fileType, oldUrl: profileImage }),
+      });
+
+      const { url } = await res.json();
+
+      // Step 2: Convert URI to Blob and upload directly to S3
+      const fileBlob = await (await fetch(asset.uri)).blob();
+
+      const uploadRes = await fetch(url, {
+        method: "PUT",
+        headers: { "Content-Type": fileType },
+        body: fileBlob,
+      });
+
+      if (!uploadRes.ok) {
+        throw new Error("Failed to upload image to S3");
+      }
+
+      const imageUrl = url.split("?")[0];
+      setProfileImage(imageUrl);
+      console.log(imageUrl);
+
+      // Step 3: Save image URL to Firestore
+      const userId = auth.currentUser?.uid;
+      if (userId) {
+        const userRef = doc(db, "users", userId);
+        await updateDoc(userRef, { profilePicture: imageUrl });
+      }
+    } catch (err) {
+      console.error("Upload error:", err);
+      Alert.alert("Error", "Could not upload image.");
+    }
+  };
+
+  if (loading) return null;
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
+    <View style={styles.main}>
+      <TouchableOpacity onPress={pickAndUploadImage}>
         <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
+          source={
+            profileImage
+              ? { uri: profileImage }
+              : require("../../assets/images/default-profile.png")
+          }
+          style={styles.profileImage}
         />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12'
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-        <ThemedText>
-          Tap the Explore tab to learn more about what's included in this starter app.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          When you're ready, run{' '}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+      </TouchableOpacity>
+
+      <Text>
+        {user?.firstName} {user?.lastName}
+      </Text>
+
+      <Button
+        title="Sign Out"
+        onPress={() => {
+          signOut(auth);
+          router.replace("/authScreen");
+        }}
+      />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+  main: {
+    height: "100%",
+    alignItems: "center",
+    justifyContent: "center",
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
-  },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  profileImage: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: "#eee",
+    marginBottom: 16,
   },
 });
