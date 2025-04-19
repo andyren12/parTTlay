@@ -10,14 +10,13 @@ import {
 } from "react-native";
 import { signOut } from "firebase/auth";
 import { auth, db } from "../../firebaseConfig";
-import { useRouter } from "expo-router";
+import { router } from "expo-router";
 import { useState, useEffect } from "react";
 import * as ImagePicker from "expo-image-picker";
 import { doc, updateDoc } from "firebase/firestore";
 
 export default function HomeScreen() {
   const { user, loading } = useAuth();
-  const router = useRouter();
   const [profileImage, setProfileImage] = useState<string | null>(null);
 
   useEffect(() => {

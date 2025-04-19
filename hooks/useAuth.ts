@@ -1,7 +1,7 @@
 // hooks/useAuth.ts
 import { useState, useEffect } from "react";
 import { onAuthStateChanged } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, onSnapshot } from "firebase/firestore";
 import { auth, db } from "../firebaseConfig";
 
 export function useAuth() {
@@ -9,30 +9,30 @@ export function useAuth() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (authUser) => {
+    // Listen to auth state changes
+    const unsubscribeAuth = onAuthStateChanged(auth, (authUser) => {
       if (authUser) {
-        try {
-          const docRef = doc(db, "users", authUser.uid);
-          const docSnap = await getDoc(docRef);
+        const docRef = doc(db, "users", authUser.uid);
 
+        // Listen to real-time updates from Firestore
+        const unsubscribeDoc = onSnapshot(docRef, (docSnap) => {
           if (docSnap.exists()) {
             setUser({ uid: authUser.uid, ...docSnap.data() });
           } else {
             console.warn("No user doc found in Firestore");
             setUser(null);
           }
-        } catch (err) {
-          console.error("Failed to fetch user document", err);
-          setUser(null);
-        }
+          setLoading(false);
+        });
+
+        return () => unsubscribeDoc(); // clean up Firestore listener
       } else {
         setUser(null);
+        setLoading(false);
       }
-
-      setLoading(false);
     });
 
-    return unsubscribe;
+    return () => unsubscribeAuth(); // clean up auth listener
   }, []);
 
   return { user, loading };

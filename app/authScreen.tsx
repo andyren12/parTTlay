@@ -15,7 +15,7 @@ import {
   signInWithEmailAndPassword,
   signOut,
 } from "firebase/auth";
-import { useRouter } from "expo-router";
+import { router } from "expo-router";
 import { db } from "@/firebaseConfig";
 
 export default function AuthScreen() {
@@ -27,7 +27,6 @@ export default function AuthScreen() {
   const [password, setPassword] = useState("");
   const [isSignUp, setIsSignUp] = useState(false);
   const [loading, setLoading] = useState(false);
-  const router = useRouter();
 
   const handleAuth = async () => {
     setLoading(true);
@@ -44,6 +43,7 @@ export default function AuthScreen() {
           firstName: firstName,
           lastName: lastName,
           createdAt: new Date(),
+          balance: 0,
         });
 
         Alert.alert("Success", `Signed up as ${userCred.user.email}`);
