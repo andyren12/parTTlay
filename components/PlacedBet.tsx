@@ -43,19 +43,28 @@ export default function PlacedBet({ bet }: { bet: Bet }) {
                 bet.status === "Over" && { backgroundColor: "lightgray" },
               ]}
               onPress={() =>
-                setSelectedBet((prev) => [
-                  ...(prev || []).filter((b) => b.name !== bet.name),
-                  {
-                    id: bet.id,
-                    propId: bet.propId,
-                    name: bet.name,
-                    picture: bet.picture,
-                    title: bet.title,
-                    status: "Over",
-                    line: bet.line,
-                    odds: bet.odds,
-                  },
-                ])
+                setSelectedBet((prev = []) => {
+                  const exists = prev.find(
+                    (b) => b.id === bet.id && b.status === "Over"
+                  );
+                  if (exists) {
+                    return prev.filter((b) => b.id !== bet.id);
+                  } else {
+                    return [
+                      ...prev.filter((b) => b.name !== bet.name),
+                      {
+                        id: bet.id,
+                        propId: bet.propId,
+                        name: bet.name,
+                        picture: bet.picture,
+                        title: bet.title,
+                        status: "Over",
+                        line: bet.line,
+                        odds: bet.odds,
+                      },
+                    ];
+                  }
+                })
               }
             >
               <Text>Over</Text>
@@ -66,19 +75,28 @@ export default function PlacedBet({ bet }: { bet: Bet }) {
                 bet.status === "Under" && { backgroundColor: "lightgray" },
               ]}
               onPress={() =>
-                setSelectedBet((prev) => [
-                  ...(prev || []).filter((b) => b.name !== bet.name),
-                  {
-                    id: bet.id,
-                    propId: bet.propId,
-                    name: bet.name,
-                    picture: bet.picture,
-                    title: bet.title,
-                    status: "Under",
-                    line: bet.line,
-                    odds: bet.odds,
-                  },
-                ])
+                setSelectedBet((prev = []) => {
+                  const exists = prev.find(
+                    (b) => b.id === bet.id && b.status === "Under"
+                  );
+                  if (exists) {
+                    return prev.filter((b) => b.id !== bet.id);
+                  } else {
+                    return [
+                      ...prev.filter((b) => b.name !== bet.name),
+                      {
+                        id: bet.id,
+                        propId: bet.propId,
+                        name: bet.name,
+                        picture: bet.picture,
+                        title: bet.title,
+                        status: "Under",
+                        line: bet.line,
+                        odds: bet.odds,
+                      },
+                    ];
+                  }
+                })
               }
             >
               <Text>Under</Text>

@@ -13,6 +13,7 @@ import {
   PanResponder,
   Easing,
   Keyboard,
+  Alert,
 } from "react-native";
 import {
   GestureHandlerRootView,
@@ -21,6 +22,8 @@ import {
 import { useRef, useState, useEffect } from "react";
 import { useRecoilState } from "recoil";
 import { router } from "expo-router";
+import { arrayUnion, doc, getDoc, updateDoc } from "firebase/firestore";
+import { db } from "@/firebaseConfig";
 
 const screenHeight = Dimensions.get("window").height;
 const SNAP_TOP = screenHeight * 0.6;
@@ -43,6 +46,7 @@ export default function track() {
   const [selectedBet, setSelectedBet] = useRecoilState(selectedBetState);
   const [betAmount, setBetAmount] = useState("");
   const [payout, setPayout] = useState("");
+  const [multiplier, setMultiplier] = useState("");
   const [currentSnap, setCurrentSnap] = useState(SNAP_TOP);
   const panY = useRef(new Animated.Value(SNAP_TOP)).current;
 
@@ -102,6 +106,50 @@ export default function track() {
       useNativeDriver: false,
     }).start();
   };
+  async function calculateProjectedPayout() {
+    if (!selectedBet.length || parseInt(betAmount) <= 0) return 0;
+
+    const amountPerBet = parseInt(betAmount) / selectedBet.length;
+    let totalPayout = 0;
+
+    for (const bet of selectedBet) {
+      const lineRef = doc(db, "lines", bet.id);
+      const lineSnap = await getDoc(lineRef);
+
+      if (!lineSnap.exists()) continue;
+
+      const lineData = lineSnap.data();
+      const existingWagers = lineData.wagers || [];
+
+      const simulatedWagers = [
+        ...existingWagers,
+        {
+          amount: amountPerBet,
+          over: bet.status === "Over",
+        },
+      ];
+
+      const overTotal = simulatedWagers
+        .filter((w) => w.over)
+        .reduce((sum, w) => sum + w.amount, 0);
+
+      const underTotal = simulatedWagers
+        .filter((w) => !w.over)
+        .reduce((sum, w) => sum + w.amount, 0);
+
+      let odds = 0;
+      if (bet.status === "Over") {
+        odds = overTotal > 0 ? underTotal / overTotal : 0;
+      } else {
+        odds = underTotal > 0 ? overTotal / underTotal : 0;
+      }
+
+      const payout = amountPerBet * odds;
+      totalPayout += payout;
+    }
+
+    return totalPayout;
+  }
 
   useEffect(() => {
     if (betAmount === "") {
@@ -109,14 +157,55 @@ export default function track() {
       return;
     }
 
-    const timeout = setTimeout(() => {
+    const timeout = setTimeout(async () => {
       const amount = parseFloat(betAmount);
       if (!isNaN(amount)) {
+        const projPayout = await calculateProjectedPayout();
+        setPayout(projPayout.toFixed(2));
+        setMultiplier((projPayout / parseInt(betAmount)).toFixed(2) + "x");
       }
-    }, 500);
+    }, 750);
 
-    return () => clearTimeout(timeout); // cleanup previous timeout
+    return () => clearTimeout(timeout);
   }, [betAmount]);
+
+  const placeBets = async () => {
+    try {
+      const amountPerBet = parseInt(betAmount) / selectedBet.length;
+      if (!selectedBet.length || isNaN(amountPerBet)) {
+        Alert.alert("Invalid bet", "Please select bets and enter an amount.");
+        return;
+      }
+
+      // Place each bet
+      await Promise.all(
+        selectedBet.map(async (bet) => {
+          const lineRef = doc(db, "lines", bet.id);
+          const lineSnap = await getDoc(lineRef);
+          if (!lineSnap.exists()) return;
+
+          const wager = {
+            name: user?.firstName,
+            userId: user?.uid,
+            amount: amountPerBet,
+            over: bet.status === "Over",
+          };
+
+          await updateDoc(lineRef, {
+            wagers: arrayUnion(wager),
+          });
+        })
+      );
+
+      setSelectedBet([]);
+      router.back();
+
+      Alert.alert("Success", "Your bets have been placed!");
+    } catch (err) {
+      console.error("Error placing bets:", err);
+      Alert.alert("Error", "Something went wrong while placing your bets.");
+    }
+  };
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
@@ -157,6 +246,15 @@ export default function track() {
               onFocus={snapToInput}
               style={styles.input}
             />
+
+            <Text style={styles.modalHeader}>Payout: </Text>
+            <View style={styles.payout}>
+              <Text>{payout}</Text>
+              <Text style={{ color: "green" }}>{multiplier}</Text>
+            </View>
+            <TouchableOpacity style={styles.playButton} onPress={placeBets}>
+              <Text>Play</Text>
+            </TouchableOpacity>
           </View>
         </Animated.View>
       </View>
@@ -219,5 +317,24 @@ const styles = StyleSheet.create({
     borderColor: "#ccc",
     borderRadius: 8,
     paddingHorizontal: 10,
+    marginBottom: 10,
+  },
+  payout: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    height: 40,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    borderColor: "#ccc",
+    borderWidth: 1,
+  },
+  playButton: {
+    backgroundColor: "gray",
+    borderRadius: 10,
+    marginTop: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 10,
+    alignItems: "center",
   },
 });

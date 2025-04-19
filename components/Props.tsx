@@ -1,26 +1,20 @@
 import { db } from "@/firebaseConfig";
 import { selectedBetState } from "@/recoil/atoms";
-import { collection, doc, getDocs } from "firebase/firestore";
+import { collection, doc, getDoc, getDocs } from "firebase/firestore";
 import { useEffect, useState } from "react";
 import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { ScrollView } from "react-native-gesture-handler";
 import { useRecoilState } from "recoil";
 
 type Prop = {
+  id: string;
   name: string;
   picture: string;
-  lines: Line[];
-};
-
-type Line = {
-  id: string;
-  propId: string;
-  line: number;
-  title: string;
-  wagers: Wager[];
+  lines: string[];
 };
 
 type Wager = {
+  userId: string;
   name: string;
   amount: number;
   over: boolean;
@@ -29,6 +23,9 @@ type Wager = {
 export default function Props() {
   const [props, setProps] = useState<Prop[]>([]);
   const [selectedBet, setSelectedBet] = useRecoilState(selectedBetState);
+  const [detailedLines, setDetailedLines] = useState<{
+    [propId: string]: any[];
+  }>({});
 
   function calculateOdds(wagers: Wager[]) {
     if (wagers) {
@@ -75,6 +72,33 @@ export default function Props() {
     fetchLines();
   }, []);
 
+  useEffect(() => {
+    const fetchAllDetailedLines = async () => {
+      const updated: { [propId: string]: any[] } = {};
+
+      for (const prop of props) {
+        const lines: any[] = [];
+
+        for (const lineId of prop.lines) {
+          const docRef = doc(db, "lines", lineId);
+          const docSnap = await getDoc(docRef);
+
+          if (docSnap.exists()) {
+            lines.push({ id: lineId, ...docSnap.data() });
+          }
+        }
+
+        updated[prop.id] = lines;
+      }
+
+      setDetailedLines(updated);
+    };
+
+    if (props.length > 0) {
+      fetchAllDetailedLines();
+    }
+  }, [props]);
+
   function LineCard({ pledge }: { pledge: Prop }) {
     return (
       <View style={styles.card}>
@@ -87,7 +111,7 @@ export default function Props() {
           <Text style={styles.name}>{pledge.name}</Text>
         </View>
         <View>
-          {pledge.lines.map((lineObj, index) => {
+          {(detailedLines[pledge.id] || []).map((lineObj, index) => {
             const selected = selectedBet.find(
               (b) => b.name === pledge.name && b.title === lineObj.title
             );
@@ -115,19 +139,31 @@ export default function Props() {
                       },
                     ]}
                     onPress={() =>
-                      setSelectedBet((prev) => [
-                        ...(prev || []).filter((b) => b.name !== pledge.name),
-                        {
-                          id: lineObj.id,
-                          propId: lineObj.propId,
-                          name: pledge.name,
-                          picture: pledge.picture,
-                          title: lineObj.title,
-                          status: "Over",
-                          line: lineObj.line,
-                          odds: overOdds,
-                        },
-                      ])
+                      setSelectedBet((prev = []) => {
+                        const exists = prev.find(
+                          (b) => b.id === lineObj.id && b.status === "Over"
+                        );
+
+                        if (exists) {
+                          return prev.filter(
+                            (b) => !(b.id === lineObj.id && b.status === "Over")
+                          );
+                        }
+
+                        return [
+                          ...prev.filter((b) => b.id !== lineObj.id),
+                          {
+                            id: lineObj.id,
+                            propId: pledge.id,
+                            name: pledge.name,
+                            picture: pledge.picture,
+                            title: lineObj.title,
+                            status: "Over",
+                            line: lineObj.line,
+                            odds: underOdds,
+                          },
+                        ];
+                      })
                     }
                   >
                     <Text>Over</Text>
@@ -143,18 +179,32 @@ export default function Props() {
                       },
                     ]}
                     onPress={() =>
-                      setSelectedBet((prev) => [
-                        ...(prev || []).filter((b) => b.name !== pledge.name),
-                        {
-                          id: lineObj.id,
-                          name: pledge.name,
-                          picture: pledge.picture,
-                          title: lineObj.title,
-                          status: "Under",
-                          line: lineObj.line,
-                          odds: underOdds,
-                        },
-                      ])
+                      setSelectedBet((prev = []) => {
+                        const exists = prev.find(
+                          (b) => b.id === lineObj.id && b.status === "Under"
+                        );
+
+                        if (exists) {
+                          return prev.filter(
+                            (b) =>
+                              !(b.id === lineObj.id && b.status === "Under")
+                          );
+                        }
+
+                        return [
+                          ...prev.filter((b) => b.id !== lineObj.id),
+                          {
+                            id: lineObj.id,
+                            propId: pledge.id,
+                            name: pledge.name,
+                            picture: pledge.picture,
+                            title: lineObj.title,
+                            status: "Under",
+                            line: lineObj.line,
+                            odds: underOdds,
+                          },
+                        ];
+                      })
                     }
                   >
                     <Text>Under</Text>
