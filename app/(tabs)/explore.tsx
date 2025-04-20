@@ -18,12 +18,6 @@ export default function Explore() {
     router.push("/deposit");
   };
 
-  type Wager = {
-    name: string;
-    amount: number;
-    over: boolean;
-  };
-
   return (
     <SafeAreaView style={styles.main}>
       <TouchableOpacity style={styles.balanceButton} onPress={deposit}>

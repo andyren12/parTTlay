@@ -103,6 +103,17 @@ export default function HomeScreen() {
           router.replace("/authScreen");
         }}
       />
+
+      {user?.email === "andyren33@gmail.com" && (
+        <View>
+          <TouchableOpacity onPress={() => router.push("/createLines")}>
+            <Text>Create Lines</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => router.push("/completeLines")}>
+            <Text>Complete Lines</Text>
+          </TouchableOpacity>
+        </View>
+      )}
     </View>
   );
 }

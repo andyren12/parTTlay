@@ -2,7 +2,9 @@ import { useEffect, useState } from "react";
 import { ScrollView, StyleSheet } from "react-native";
 import { collection, doc, getDoc, getDocs } from "firebase/firestore";
 import { db } from "@/firebaseConfig";
-import LineCard from "@/components/LineCard";
+import CompleteLineCard from "@/components/CompleteLineCard";
+import { SafeAreaView } from "react-native-safe-area-context";
+import BackButton from "@/components/BackButton";
 
 type Prop = {
   id: string;
@@ -11,14 +13,7 @@ type Prop = {
   lines: string[];
 };
 
-type Wager = {
-  userId: string;
-  name: string;
-  amount: number;
-  over: boolean;
-};
-
-export default function Props() {
+export default function completeLines() {
   const [props, setProps] = useState<Prop[]>([]);
   const [detailedLines, setDetailedLines] = useState<{
     [propId: string]: any[];
@@ -36,7 +31,6 @@ export default function Props() {
             } as Prop)
         )
         .filter((prop) => Array.isArray(prop.lines) && prop.lines.length > 0);
-
       setProps(propList);
     };
 
@@ -70,45 +64,24 @@ export default function Props() {
     }
   }, [props]);
 
-  function calculateOdds(wagers: Wager[]) {
-    const overTotal =
-      wagers?.filter((w) => w.over).reduce((sum, w) => sum + w.amount, 0) || 0;
-
-    const underTotal =
-      wagers?.filter((w) => !w.over).reduce((sum, w) => sum + w.amount, 0) || 0;
-
-    let overOdds = 0;
-    let underOdds = 0;
-
-    if (overTotal > 0 && underTotal > 0) {
-      overOdds = +(underTotal / overTotal).toFixed(2);
-      underOdds = +(overTotal / underTotal).toFixed(2);
-    } else if (overTotal > 0 && underTotal === 0) {
-      overOdds = 0;
-      underOdds = overTotal;
-    } else if (underTotal > 0 && overTotal === 0) {
-      overOdds = underTotal;
-      underOdds = 0;
-    }
-
-    return { overOdds, underOdds };
-  }
-
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      {props.map((prop) => (
-        <LineCard
-          key={prop.id}
-          pledge={{
-            id: prop.id,
-            name: prop.name,
-            picture: prop.picture,
-            lines: detailedLines[prop.id] || [],
-          }}
-          calculateOdds={calculateOdds}
-        />
-      ))}
-    </ScrollView>
+    <SafeAreaView>
+      <BackButton />
+      <ScrollView contentContainerStyle={styles.container}>
+        {props.map((prop) => (
+          <CompleteLineCard
+            key={prop.id}
+            pledge={{
+              id: prop.id,
+              name: prop.name,
+              picture: prop.picture,
+              lines: detailedLines[prop.id] || [],
+            }}
+            setProps={setProps}
+          />
+        ))}
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 

@@ -177,7 +177,6 @@ export default function track() {
         return;
       }
 
-      // Place each bet
       await Promise.all(
         selectedBet.map(async (bet) => {
           const lineRef = doc(db, "lines", bet.id);
@@ -196,6 +195,11 @@ export default function track() {
           });
         })
       );
+
+      const userRef = doc(db, "users", user?.uid);
+      await updateDoc(userRef, {
+        balance: user?.balance - parseInt(betAmount),
+      });
 
       setSelectedBet([]);
       router.back();

@@ -16,7 +16,13 @@ export default function Bets() {
   const [selectedBet, setSelectedBet] = useRecoilState(selectedBetState);
 
   const pathname = usePathname();
-  const hideOnScreens = ["/track", "/deposit", "/authScreen"];
+  const hideOnScreens = [
+    "/track",
+    "/deposit",
+    "/authScreen",
+    "/completeLines",
+    "/createLines",
+  ];
 
   if (hideOnScreens.includes(pathname)) {
     return null;

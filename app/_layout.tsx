@@ -53,6 +53,8 @@ function LayoutWithModal() {
         <Stack.Screen name="authScreen" options={{ headerShown: false }} />
         <Stack.Screen name="deposit" options={{ headerShown: false }} />
         <Stack.Screen name="track" options={{ headerShown: false }} />
+        <Stack.Screen name="createLines" options={{ headerShown: false }} />
+        <Stack.Screen name="completeLines" options={{ headerShown: false }} />
       </Stack>
 
       {selectedBet && <Bets />}
