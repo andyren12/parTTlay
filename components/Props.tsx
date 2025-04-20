@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ScrollView, StyleSheet } from "react-native";
+import { RefreshControl, ScrollView, StyleSheet } from "react-native";
 import { collection, doc, getDoc, getDocs } from "firebase/firestore";
 import { db } from "@/firebaseConfig";
 import LineCard from "@/components/LineCard";
@@ -23,23 +23,26 @@ export default function Props() {
   const [detailedLines, setDetailedLines] = useState<{
     [propId: string]: any[];
   }>({});
+  const [refreshing, setRefreshing] = useState(false);
+
+  const fetchProps = async () => {
+    setRefreshing(true);
+    const querySnapshot = await getDocs(collection(db, "props"));
+    const propList = querySnapshot.docs
+      .map(
+        (doc) =>
+          ({
+            id: doc.id,
+            ...doc.data(),
+          } as Prop)
+      )
+      .filter((prop) => Array.isArray(prop.lines) && prop.lines.length > 0);
+
+    setProps(propList);
+    setRefreshing(false);
+  };
 
   useEffect(() => {
-    const fetchProps = async () => {
-      const querySnapshot = await getDocs(collection(db, "props"));
-      const propList = querySnapshot.docs
-        .map(
-          (doc) =>
-            ({
-              id: doc.id,
-              ...doc.data(),
-            } as Prop)
-        )
-        .filter((prop) => Array.isArray(prop.lines) && prop.lines.length > 0);
-
-      setProps(propList);
-    };
-
     fetchProps();
   }, []);
 
@@ -95,7 +98,12 @@ export default function Props() {
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <ScrollView
+      contentContainerStyle={styles.container}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={fetchProps} />
+      }
+    >
       {props.map((prop) => (
         <LineCard
           key={prop.id}
@@ -115,5 +123,6 @@ export default function Props() {
 const styles = StyleSheet.create({
   container: {
     padding: 16,
+    height: "100%",
   },
 });

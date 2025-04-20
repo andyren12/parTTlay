@@ -39,7 +39,6 @@ export default function HomeScreen() {
     const fileType = "image/jpeg";
 
     try {
-      // Step 1: Request a presigned URL from the backend
       const res = await fetch("http://localhost:3001/api/getPresignedUrl", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -48,7 +47,6 @@ export default function HomeScreen() {
 
       const { url } = await res.json();
 
-      // Step 2: Convert URI to Blob and upload directly to S3
       const fileBlob = await (await fetch(asset.uri)).blob();
 
       const uploadRes = await fetch(url, {

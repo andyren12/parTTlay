@@ -44,6 +44,7 @@ export default function AuthScreen() {
           lastName: lastName,
           createdAt: new Date(),
           balance: 0,
+          uid: userCred.user.uid,
         });
 
         Alert.alert("Success", `Signed up as ${userCred.user.email}`);

@@ -73,14 +73,24 @@ export default function CompleteLineCard({ pledge, setProps }: LineCardProps) {
                 0
               );
 
-              for (const wager of winners) {
-                const userShare = wager.amount / totalWinning;
-                const payout = userShare * totalLosing;
+              if (winners.length > 0 && losers.length > 0) {
+                for (const wager of winners) {
+                  const userShare = wager.amount / totalWinning;
+                  const payout = wager.amount + userShare * totalLosing;
 
-                const userRef = doc(db, "users", wager.userId);
-                await updateDoc(userRef, {
-                  balance: increment(payout),
-                });
+                  const userRef = doc(db, "users", wager.userId);
+                  await updateDoc(userRef, {
+                    balance: increment(payout),
+                  });
+                }
+              } else {
+                const allWagers = [...winners, ...losers];
+                for (const wager of allWagers) {
+                  const userRef = doc(db, "users", wager.userId);
+                  await updateDoc(userRef, {
+                    balance: increment(wager.amount),
+                  });
+                }
               }
 
               const propRef = doc(db, "props", lineObj.propId);
