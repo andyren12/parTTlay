@@ -109,6 +109,7 @@ export default function CreateLineCard({ pledge }: LineCardProps) {
           <View style={{ marginTop: 10, alignItems: "center" }}>
             <TextInput
               placeholder="Title"
+              placeholderTextColor={"gray"}
               style={styles.input}
               value={newTitle}
               autoCapitalize="none"
@@ -116,6 +117,7 @@ export default function CreateLineCard({ pledge }: LineCardProps) {
             />
             <TextInput
               placeholder="Line"
+              placeholderTextColor={"gray"}
               style={styles.input}
               keyboardType="numeric"
               value={newLine}

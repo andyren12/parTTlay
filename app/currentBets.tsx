@@ -258,6 +258,7 @@ export default function currentBets() {
             <TextInput
               keyboardType="numeric"
               placeholder="$ Amount"
+              placeholderTextColor={"gray"}
               value={betAmount}
               onChangeText={(e) => setBetAmount(e)}
               onFocus={snapToInput}

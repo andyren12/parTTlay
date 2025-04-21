@@ -82,6 +82,7 @@ export default function AuthScreen() {
         <View>
           <TextInput
             placeholder="First Name"
+            placeholderTextColor={"gray"}
             value={firstName}
             autoCapitalize="none"
             onChangeText={setFirstName}
@@ -90,6 +91,7 @@ export default function AuthScreen() {
 
           <TextInput
             placeholder="Last Name"
+            placeholderTextColor={"gray"}
             value={lastName}
             autoCapitalize="none"
             onChangeText={setLastName}
@@ -99,6 +101,7 @@ export default function AuthScreen() {
       )}
       <TextInput
         placeholder="Email"
+        placeholderTextColor={"gray"}
         value={email}
         autoCapitalize="none"
         onChangeText={setEmail}
@@ -107,6 +110,7 @@ export default function AuthScreen() {
 
       <TextInput
         placeholder="Password"
+        placeholderTextColor={"gray"}
         value={password}
         secureTextEntry
         onChangeText={setPassword}
