@@ -100,9 +100,14 @@ export default function CompleteLineCard({ pledge, setProps }: LineCardProps) {
                     updateData.balance = increment(payout);
                   }
 
+                  const line = (isOver ? "Over " : "Under ") + lineData.line;
+
                   const completedWager = {
                     ...wager,
                     result: isWinner ? "win" : "lose",
+                    line: line,
+                    propId: lineData.propId,
+                    title: lineData.title,
                     completedAt: Timestamp.now(),
                     payout,
                   };

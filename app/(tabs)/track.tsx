@@ -1,3 +1,4 @@
+import CompletedBets from "@/components/CompletedBets";
 import LiveBets from "@/components/LiveBets";
 import React, { useRef, useState } from "react";
 import {
@@ -69,8 +70,8 @@ export default function Track() {
         <View style={styles.screen}>
           <LiveBets />
         </View>
-        <View style={[styles.screen, { backgroundColor: "#F08080" }]}>
-          <Text style={styles.text}>Component B</Text>
+        <View style={styles.screen}>
+          <CompletedBets />
         </View>
       </Animated.View>
     </SafeAreaView>
