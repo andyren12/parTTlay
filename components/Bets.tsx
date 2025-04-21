@@ -17,7 +17,7 @@ export default function Bets() {
 
   const pathname = usePathname();
   const hideOnScreens = [
-    "/track",
+    "/currentBets",
     "/deposit",
     "/authScreen",
     "/completeLines",
@@ -29,7 +29,7 @@ export default function Bets() {
   }
 
   return (
-    <TouchableOpacity onPress={() => router.push("/track")}>
+    <TouchableOpacity onPress={() => router.push("/currentBets")}>
       <View style={styles.modal}>
         {selectedBet.map((bet) => {
           return (

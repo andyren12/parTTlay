@@ -39,11 +39,14 @@ export default function HomeScreen() {
     const fileType = "image/jpeg";
 
     try {
-      const res = await fetch("http://localhost:3001/api/getPresignedUrl", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ fileName, fileType, oldUrl: profileImage }),
-      });
+      const res = await fetch(
+        "https://parttlay-production.up.railway.app/api/getPresignedUrl",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ fileName, fileType, oldUrl: profileImage }),
+        }
+      );
 
       const { url } = await res.json();
 

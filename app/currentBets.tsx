@@ -24,6 +24,7 @@ import { useRecoilState } from "recoil";
 import { router } from "expo-router";
 import { arrayUnion, doc, getDoc, updateDoc } from "firebase/firestore";
 import { db } from "@/firebaseConfig";
+import uuid from "react-native-uuid";
 
 const screenHeight = Dimensions.get("window").height;
 const SNAP_TOP = screenHeight * 0.6;
@@ -41,7 +42,7 @@ type Bet = {
   odds: number;
 };
 
-export default function track() {
+export default function currentBets() {
   const { user, loading } = useAuth();
   const [selectedBet, setSelectedBet] = useRecoilState(selectedBetState);
   const [betAmount, setBetAmount] = useState("");
@@ -182,24 +183,36 @@ export default function track() {
           const lineRef = doc(db, "lines", bet.id);
           const lineSnap = await getDoc(lineRef);
           if (!lineSnap.exists()) return;
+          const wagerId = uuid.v4();
 
-          const wager = {
+          const lineWager = {
+            wagerId: wagerId,
             name: user?.firstName,
             userId: user?.uid,
             amount: amountPerBet,
             over: bet.status === "Over",
           };
 
+          const userWager = {
+            wagerId: wagerId,
+            lineId: bet.id,
+            propId: bet.propId,
+            amount: amountPerBet,
+            over: bet.status === "Over",
+          };
+
           await updateDoc(lineRef, {
-            wagers: arrayUnion(wager),
+            wagers: arrayUnion(lineWager),
+          });
+
+          const userRef = doc(db, "users", user?.uid);
+          console.log(userRef);
+          await updateDoc(userRef, {
+            currentWagers: arrayUnion(userWager),
+            balance: user?.balance - parseInt(betAmount),
           });
         })
       );
-
-      const userRef = doc(db, "users", user?.uid);
-      await updateDoc(userRef, {
-        balance: user?.balance - parseInt(betAmount),
-      });
 
       setSelectedBet([]);
       router.back();

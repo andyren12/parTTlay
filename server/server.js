@@ -13,7 +13,7 @@ const { getSignedUrl } = require("@aws-sdk/s3-request-presigner");
 dotenv.config();
 
 const app = express();
-const port = process.env.PORT || 3001;
+const port = process.env.PORT || 8080;
 
 // Middleware
 app.use(cors());
@@ -65,7 +65,6 @@ app.post("/api/getPresignedUrl", async (req, res) => {
   }
 });
 
-// Start the server
 app.listen(port, () => {
-  console.log(`🚀 Server running at http://localhost:${port}`);
+  console.log(`🚀 Server running on port ${port}`);
 });

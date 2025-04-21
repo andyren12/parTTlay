@@ -111,6 +111,7 @@ export default function CreateLineCard({ pledge }: LineCardProps) {
               placeholder="Title"
               style={styles.input}
               value={newTitle}
+              autoCapitalize="none"
               onChangeText={setNewTitle}
             />
             <TextInput

@@ -17,6 +17,7 @@ type Wager = {
   name: string;
   amount: number;
   over: boolean;
+  wagerId: string;
 };
 
 export default function LineCard({ pledge, calculateOdds }: LineCardProps) {

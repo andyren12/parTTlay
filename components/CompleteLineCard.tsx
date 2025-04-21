@@ -1,8 +1,8 @@
 import { StyleSheet, Text, View, Image, TouchableOpacity } from "react-native";
-import { useRecoilState } from "recoil";
-import { selectedBetState } from "@/recoil/atoms";
 import {
+  Timestamp,
   arrayRemove,
+  arrayUnion,
   deleteDoc,
   doc,
   getDoc,
@@ -29,6 +29,7 @@ type Prop = {
 };
 
 type Wager = {
+  id: string;
   userId: string;
   name: string;
   amount: number;
@@ -57,40 +58,61 @@ export default function CompleteLineCard({ pledge, setProps }: LineCardProps) {
               if (!lineSnap.exists()) return;
 
               const lineData = lineSnap.data();
-              const wagers = lineData.wagers || [];
+              const wagers: Wager[] = lineData.wagers || [];
 
               const isOver = status === "Over";
 
-              const winners = wagers.filter((w: Wager) => w.over === isOver);
-              const losers = wagers.filter((w: Wager) => w.over !== isOver);
+              const winners = wagers.filter((w) => w.over === isOver);
+              const losers = wagers.filter((w) => w.over !== isOver);
 
               const totalWinning = winners.reduce(
-                (sum: number, w: Wager) => sum + w.amount,
+                (sum, w) => sum + w.amount,
                 0
               );
-              const totalLosing = losers.reduce(
-                (sum: number, w: Wager) => sum + w.amount,
-                0
-              );
+              const totalLosing = losers.reduce((sum, w) => sum + w.amount, 0);
 
-              if (winners.length > 0 && losers.length > 0) {
-                for (const wager of winners) {
-                  const userShare = wager.amount / totalWinning;
-                  const payout = wager.amount + userShare * totalLosing;
+              const allWagers = [...winners, ...losers];
+              const hasOpposition = winners.length > 0 && losers.length > 0;
 
-                  const userRef = doc(db, "users", wager.userId);
-                  await updateDoc(userRef, {
-                    balance: increment(payout),
-                  });
+              for (const wager of allWagers) {
+                const userRef = doc(db, "users", wager.userId);
+                const userSnap = await getDoc(userRef);
+                const userData = userSnap.data();
+                const currentWagers = userData.currentWagers || [];
+
+                // Remove wager from currentWagers
+                const updatedCurrentWagers = currentWagers.filter(
+                  (w: Wager) => w.id !== wager.id
+                );
+
+                const updateData: any = {
+                  currentWagers: updatedCurrentWagers,
+                };
+
+                if (hasOpposition) {
+                  // Mark result + payout
+                  const isWinner = winners.find((w) => w.id === wager.id);
+                  let payout = 0;
+
+                  if (isWinner) {
+                    const userShare = wager.amount / totalWinning;
+                    payout = wager.amount + userShare * totalLosing;
+                    updateData.balance = increment(payout);
+                  }
+
+                  const completedWager = {
+                    ...wager,
+                    result: isWinner ? "win" : "lose",
+                    completedAt: Timestamp.now(),
+                    payout,
+                  };
+
+                  updateData.completedWagers = arrayUnion(completedWager);
+                } else {
+                  updateData.balance = increment(wager.amount);
                 }
-              } else {
-                const allWagers = [...winners, ...losers];
-                for (const wager of allWagers) {
-                  const userRef = doc(db, "users", wager.userId);
-                  await updateDoc(userRef, {
-                    balance: increment(wager.amount),
-                  });
-                }
+
+                await updateDoc(userRef, updateData);
               }
 
               const propRef = doc(db, "props", lineObj.propId);
@@ -99,6 +121,7 @@ export default function CompleteLineCard({ pledge, setProps }: LineCardProps) {
               });
 
               await deleteDoc(lineRef);
+
               setProps((prev: any) =>
                 prev.map((prop: Prop) =>
                   prop.id === lineObj.propId
