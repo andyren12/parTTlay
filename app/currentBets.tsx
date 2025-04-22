@@ -50,6 +50,7 @@ export default function currentBets() {
   const [multiplier, setMultiplier] = useState("");
   const [currentSnap, setCurrentSnap] = useState(SNAP_TOP);
   const panY = useRef(new Animated.Value(SNAP_TOP)).current;
+  const [overBet, setOverBet] = useState(false);
 
   const deposit = () => {
     router.push("/deposit");
@@ -158,6 +159,13 @@ export default function currentBets() {
       return;
     }
 
+    if (parseInt(betAmount) > user?.balance) {
+      setOverBet(true);
+      return;
+    } else {
+      setOverBet(false);
+    }
+
     const timeout = setTimeout(async () => {
       const amount = parseFloat(betAmount);
       if (!isNaN(amount)) {
@@ -264,13 +272,22 @@ export default function currentBets() {
               onFocus={snapToInput}
               style={styles.input}
             />
+            {overBet && (
+              <Text style={{ color: "red" }}>
+                Bet must be less than current balance.
+              </Text>
+            )}
 
             <Text style={styles.modalHeader}>Payout: </Text>
             <View style={styles.payout}>
               <Text>{payout}</Text>
               <Text style={{ color: "green" }}>{multiplier}</Text>
             </View>
-            <TouchableOpacity style={styles.playButton} onPress={placeBets}>
+            <TouchableOpacity
+              style={[styles.playButton, overBet && styles.playButtonDisabled]}
+              disabled={overBet}
+              onPress={placeBets}
+            >
               <Text>Play</Text>
             </TouchableOpacity>
           </View>
@@ -354,5 +371,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 10,
     alignItems: "center",
+  },
+  playButtonDisabled: {
+    backgroundColor: "lightgray",
   },
 });
