@@ -123,7 +123,7 @@ export default function Props() {
 
 const styles = StyleSheet.create({
   container: {
+    paddingBottom: 120,
     padding: 16,
-    height: "100%",
   },
 });

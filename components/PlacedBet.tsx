@@ -15,8 +15,15 @@ type Bet = {
 
 export default function PlacedBet({ bet }: { bet: Bet }) {
   const [selectedBet, setSelectedBet] = useRecoilState(selectedBetState);
-  const overOdds = bet.status === "Over" ? bet.odds : 1 / bet.odds;
-  const underOdds = 1 / overOdds;
+
+  let overOdds, underOdds;
+  if (bet.odds === 0) {
+    overOdds = 0;
+    underOdds = 0;
+  } else {
+    overOdds = bet.status === "Over" ? bet.odds : 1 / bet.odds;
+    underOdds = 1 / overOdds;
+  }
   {
     return (
       <View style={styles.card}>
@@ -70,7 +77,7 @@ export default function PlacedBet({ bet }: { bet: Bet }) {
               }
             >
               <Text>Over</Text>
-              <Text>{overOdds.toFixed(2)}x</Text>
+              {overOdds !== 0 && <Text>{overOdds.toFixed(2)}x</Text>}
             </TouchableOpacity>
             <TouchableOpacity
               style={[
@@ -103,7 +110,7 @@ export default function PlacedBet({ bet }: { bet: Bet }) {
               }
             >
               <Text>Under</Text>
-              <Text>{underOdds.toFixed(2)}x</Text>
+              {underOdds !== 0 && <Text>{underOdds.toFixed(2)}x</Text>}
             </TouchableOpacity>
           </View>
         </View>
