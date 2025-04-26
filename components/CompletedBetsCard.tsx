@@ -73,7 +73,7 @@ export default function CompletedBetsCard({ bet }: { bet: completedBet }) {
         )}
         <View style={{ alignItems: "center" }}>
           <Text>Payout</Text>
-          <Text>${bet.payout}</Text>
+          <Text>${bet.payout.toFixed(2)}</Text>
         </View>
       </View>
     </View>
