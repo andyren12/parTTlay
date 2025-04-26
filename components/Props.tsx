@@ -8,6 +8,7 @@ type Prop = {
   id: string;
   name: string;
   picture: string;
+  type: string;
   lines: string[];
 };
 
@@ -112,6 +113,7 @@ export default function Props() {
             id: prop.id,
             name: prop.name,
             picture: prop.picture,
+            type: prop.type,
             lines: detailedLines[prop.id] || [],
           }}
           calculateOdds={calculateOdds}

@@ -6,20 +6,24 @@ import { Image, StyleSheet, Text, View } from "react-native";
 type liveBet = {
   amount: number;
   lineId: string;
-  over: boolean;
   propId: string;
   wagerId: string;
+  type: "simple" | "firstToComplete";
+  over?: boolean; // only for simple
+  participant?: string; // only for firstToComplete
 };
 
 type Wager = {
   userId: string;
   name: string;
   amount: number;
-  over: boolean;
   wagerId: string;
+  over?: boolean;
+  participant?: string;
 };
 
 export default function LiveBetsCard({ bet }: { bet: liveBet }) {
+  console.log(bet);
   const [name, setName] = useState("");
   const [picture, setPicture] = useState("");
   const [line, setLine] = useState(0);
@@ -53,31 +57,52 @@ export default function LiveBetsCard({ bet }: { bet: liveBet }) {
     const calculateExpectedPayout = (wagers: Wager[]) => {
       if (!wagers) return;
 
-      const isOver = bet.over;
       const userAmount = bet.amount;
 
-      const sameSideWagers = wagers.filter(
-        (w) => w.over === isOver && w.wagerId !== bet.wagerId
-      );
-      const otherSideWagers = wagers.filter((w) => w.over !== isOver);
+      if (bet.type === "simple") {
+        const isOver = bet.over;
 
-      const sameSideTotal = sameSideWagers.reduce(
-        (sum, w) => sum + w.amount,
-        0
-      );
-      const otherSideTotal = otherSideWagers.reduce(
-        (sum, w) => sum + w.amount,
-        0
-      );
+        const sameSideWagers = wagers.filter(
+          (w) => w.over === isOver && w.wagerId !== bet.wagerId
+        );
+        const otherSideWagers = wagers.filter((w) => w.over !== isOver);
 
-      const fullSameSideTotal = sameSideTotal + userAmount;
+        const sameSideTotal = sameSideWagers.reduce(
+          (sum, w) => sum + w.amount,
+          0
+        );
+        const otherSideTotal = otherSideWagers.reduce(
+          (sum, w) => sum + w.amount,
+          0
+        );
 
-      if (fullSameSideTotal > 0 && otherSideTotal > 0) {
-        const userShare = userAmount / fullSameSideTotal;
-        const payout = userAmount + userShare * otherSideTotal;
-        setExpectedPayout(Number(payout.toFixed(2)));
-      } else {
-        setExpectedPayout(userAmount);
+        const fullSameSideTotal = sameSideTotal + userAmount;
+
+        if (fullSameSideTotal > 0 && otherSideTotal > 0) {
+          const userShare = userAmount / fullSameSideTotal;
+          const payout = userAmount + userShare * otherSideTotal;
+          setExpectedPayout(Number(payout.toFixed(2)));
+        } else {
+          setExpectedPayout(userAmount);
+        }
+      } else if (bet.type === "firstToComplete") {
+        const existingPool = wagers.reduce((sum, w) => sum + w.amount, 0);
+        const mySideTotal = wagers
+          .filter(
+            (w) =>
+              w.participant === bet.participant && w.wagerId !== bet.wagerId
+          )
+          .reduce((sum, w) => sum + w.amount, 0);
+
+        const totalPool = existingPool;
+        const totalMySide = mySideTotal;
+
+        if (totalMySide > 0) {
+          const payout = totalPool * (bet.amount / totalMySide);
+          setExpectedPayout(Number(payout.toFixed(2)));
+        } else {
+          setExpectedPayout(bet.amount);
+        }
       }
     };
 
@@ -98,9 +123,14 @@ export default function LiveBetsCard({ bet }: { bet: liveBet }) {
       <View style={styles.descriptionContainer}>
         <Text style={styles.description1}>{title}</Text>
         <View style={styles.line}>
-          <Text style={styles.description1}>
-            {bet.over ? "Over" : "Under"} {line}
-          </Text>
+          {bet.type === "simple" && (
+            <Text style={styles.description1}>
+              {bet.over ? "Over" : "Under"} {line}
+            </Text>
+          )}
+          {bet.type === "firstToComplete" && (
+            <Text style={styles.description1}>Picked: {bet.participant}</Text>
+          )}
         </View>
       </View>
 
@@ -111,7 +141,11 @@ export default function LiveBetsCard({ bet }: { bet: liveBet }) {
         </View>
         <View style={{ alignItems: "center" }}>
           <Text>Multiplier</Text>
-          <Text>{(expectedPayout / bet.amount).toFixed(2)}x</Text>
+          <Text>
+            {bet.amount > 0
+              ? (expectedPayout / bet.amount).toFixed(2) + "x"
+              : "1.00x"}
+          </Text>
         </View>
         <View style={{ alignItems: "center" }}>
           <Text>Payout</Text>

@@ -10,6 +10,7 @@ import {
   updateDoc,
 } from "firebase/firestore";
 import { db } from "@/firebaseConfig";
+import { PARTICIPANTS } from "@/constants/participants";
 
 type LineCardProps = {
   pledge: {
@@ -17,6 +18,7 @@ type LineCardProps = {
     name: string;
     picture: string;
     lines: any[];
+    type: string;
   };
   setProps: (props: any) => void;
 };
@@ -33,7 +35,8 @@ type Wager = {
   userId: string;
   name: string;
   amount: number;
-  over: boolean;
+  over?: boolean; // Only for simple bets
+  participant?: string; // Only for firstToComplete
 };
 
 export default function CompleteLineCard({ pledge, setProps }: LineCardProps) {
@@ -50,7 +53,7 @@ export default function CompleteLineCard({ pledge, setProps }: LineCardProps) {
 
       <View>
         {pledge.lines.map((lineObj, index) => {
-          const selectBet = async (status: "Over" | "Under") => {
+          const selectBet = async (result: any) => {
             try {
               const lineRef = doc(db, "lines", lineObj.id);
               const lineSnap = await getDoc(lineRef);
@@ -59,11 +62,24 @@ export default function CompleteLineCard({ pledge, setProps }: LineCardProps) {
 
               const lineData = lineSnap.data();
               const wagers: Wager[] = lineData.wagers || [];
+              const isSimple = lineData.type === "simple";
 
-              const isOver = status === "Over";
+              const allWagers = wagers;
+              const hasOpposition = wagers.length > 1;
 
-              const winners = wagers.filter((w) => w.over === isOver);
-              const losers = wagers.filter((w) => w.over !== isOver);
+              let winners: Wager[] = [];
+              let losers: Wager[] = [];
+              let totalPool = wagers.reduce((sum, w) => sum + w.amount, 0);
+
+              if (isSimple) {
+                const isOver = result === "Over";
+
+                winners = wagers.filter((w) => w.over === isOver);
+                losers = wagers.filter((w) => w.over !== isOver);
+              } else {
+                winners = wagers.filter((w) => w.participant === result);
+                losers = wagers.filter((w) => w.participant !== result);
+              }
 
               const totalWinning = winners.reduce(
                 (sum, w) => sum + w.amount,
@@ -71,16 +87,12 @@ export default function CompleteLineCard({ pledge, setProps }: LineCardProps) {
               );
               const totalLosing = losers.reduce((sum, w) => sum + w.amount, 0);
 
-              const allWagers = [...winners, ...losers];
-              const hasOpposition = winners.length > 0 && losers.length > 0;
-
               for (const wager of allWagers) {
                 const userRef = doc(db, "users", wager.userId);
                 const userSnap = await getDoc(userRef);
                 const userData = userSnap.data();
                 const currentWagers = userData.currentWagers || [];
 
-                // Remove wager from currentWagers
                 const updatedCurrentWagers = currentWagers.filter(
                   (w: Wager) => w.id !== wager.id
                 );
@@ -90,30 +102,42 @@ export default function CompleteLineCard({ pledge, setProps }: LineCardProps) {
                 };
 
                 if (hasOpposition) {
-                  // Mark result + payout
-                  const isWinner = winners.find((w) => w.id === wager.id);
+                  const isWinner =
+                    lineData.type === "simple"
+                      ? winners.find((w) => w.id === wager.id)
+                      : wager.participant === result;
+
                   let payout = 0;
 
                   if (isWinner) {
-                    const userShare = wager.amount / totalWinning;
-                    payout = wager.amount + userShare * totalLosing;
+                    if (isSimple) {
+                      const userShare = wager.amount / totalWinning;
+                      payout = wager.amount + userShare * totalLosing;
+                    } else {
+                      const userShare = wager.amount / totalWinning;
+                      payout = userShare * totalPool;
+                    }
+
                     updateData.balance = increment(payout);
                   }
-
-                  const line = (isOver ? "Over " : "Under ") + lineData.line;
 
                   const completedWager = {
                     ...wager,
                     result: isWinner ? "win" : "lose",
-                    line: line,
                     propId: lineData.propId,
                     title: lineData.title,
+                    line: isSimple
+                      ? result === "Over"
+                        ? `Over ${lineData.line}`
+                        : `Under ${lineData.line}`
+                      : `Winner: ${result}`,
                     completedAt: Timestamp.now(),
                     payout,
                   };
 
                   updateData.completedWagers = arrayUnion(completedWager);
                 } else {
+                  // Refund entry if no competition
                   updateData.balance = increment(wager.amount);
                 }
 
@@ -152,25 +176,45 @@ export default function CompleteLineCard({ pledge, setProps }: LineCardProps) {
               style={{
                 flexDirection: "row",
                 justifyContent: "space-between",
+                alignItems: "center",
               }}
             >
               <View style={styles.line}>
-                <Text>{lineObj.line}</Text>
+                {pledge.type === "person" && <Text>{lineObj.line}</Text>}
                 <Text>{lineObj.title}</Text>
               </View>
+
               <View style={{ flexDirection: "row", marginRight: 10 }}>
-                <TouchableOpacity
-                  style={styles.button}
-                  onPress={async () => await selectBet("Over")}
-                >
-                  <Text>Over</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.button}
-                  onPress={async () => await selectBet("Under")}
-                >
-                  <Text>Under</Text>
-                </TouchableOpacity>
+                {lineObj.type === "simple" ? (
+                  <>
+                    <TouchableOpacity
+                      style={styles.button}
+                      onPress={async () => await selectBet("Over")}
+                    >
+                      <Text>Over</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.button}
+                      onPress={async () => await selectBet("Under")}
+                    >
+                      <Text>Under</Text>
+                    </TouchableOpacity>
+                  </>
+                ) : (
+                  <>
+                    <View style={styles.participantGrid}>
+                      {PARTICIPANTS.map((name) => (
+                        <TouchableOpacity
+                          key={name}
+                          style={styles.button}
+                          onPress={() => selectBet(name)}
+                        >
+                          <Text style={{ textAlign: "center" }}>{name}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </>
+                )}
               </View>
             </View>
           );
@@ -213,5 +257,12 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     marginBottom: 10,
     marginLeft: 5,
+  },
+  participantGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "center",
+    marginHorizontal: 10,
+    marginTop: 10,
   },
 });

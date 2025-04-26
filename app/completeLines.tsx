@@ -11,6 +11,7 @@ type Prop = {
   name: string;
   picture: string;
   lines: string[];
+  type: string;
 };
 
 export default function completeLines() {
@@ -75,6 +76,7 @@ export default function completeLines() {
               id: prop.id,
               name: prop.name,
               picture: prop.picture,
+              type: prop.type,
               lines: detailedLines[prop.id] || [],
             }}
             setProps={setProps}

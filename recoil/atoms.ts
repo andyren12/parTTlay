@@ -6,9 +6,11 @@ type Bet = {
   name: string;
   picture: string;
   title: string;
-  status: string;
-  line: number;
-  odds: number;
+  type: "simple" | "firstToComplete";
+  status?: "Over" | "Under";
+  line?: number;
+  odds?: number;
+  participant?: string;
 };
 
 export const selectedBetState = atom<Bet[]>({

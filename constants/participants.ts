@@ -1,0 +1,18 @@
+export const PARTICIPANTS = [
+  "Alex Yousefi",
+  "Angela Magtoto",
+  "Bradley Morgan",
+  "Brian Chang",
+  "Charlton Shih",
+  "Chloe Li",
+  "Dahlia Navarro",
+  "Felicia Chen",
+  "Glen Troy San Diego",
+  "Jeremy De Leon",
+  "Katie Lew",
+  "Kennedy Hayashi",
+  "Niccolo Duina",
+  "Raphael Figueroa",
+  "Shaun Gao",
+  "Shawn Nguyen",
+];

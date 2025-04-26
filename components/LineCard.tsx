@@ -1,12 +1,14 @@
 import { StyleSheet, Text, View, Image, TouchableOpacity } from "react-native";
 import { useRecoilState } from "recoil";
 import { selectedBetState } from "@/recoil/atoms";
+import { PARTICIPANTS } from "@/constants/participants";
 
 type LineCardProps = {
   pledge: {
     id: string;
     name: string;
     picture: string;
+    type: string;
     lines: any[];
   };
   calculateOdds: (wagers: Wager[]) => { overOdds: number; underOdds: number };
@@ -22,6 +24,34 @@ type Wager = {
 
 export default function LineCard({ pledge, calculateOdds }: LineCardProps) {
   const [selectedBet, setSelectedBet] = useRecoilState(selectedBetState);
+  console.log(selectedBet);
+
+  const handleSelectParticipant = (participant: string, lineObj: any) => {
+    setSelectedBet((prev: any[]) => {
+      const exists = prev.find(
+        (b) => b.id === lineObj.id && b.participant === participant
+      );
+
+      if (exists) {
+        return prev.filter(
+          (b) => !(b.id === lineObj.id && b.participant === participant)
+        );
+      }
+
+      return [
+        ...prev.filter((b) => b.propId !== lineObj.propId),
+        {
+          id: lineObj.id,
+          propId: pledge.id,
+          name: pledge.name,
+          picture: pledge.picture,
+          title: lineObj.title,
+          participant,
+          type: "firstToComplete",
+        },
+      ];
+    });
+  };
 
   return (
     <View style={styles.card}>
@@ -63,6 +93,7 @@ export default function LineCard({ pledge, calculateOdds }: LineCardProps) {
                   status,
                   line: lineObj.line,
                   odds: status === "Over" ? overOdds : underOdds,
+                  type: "simple",
                 },
               ];
             });
@@ -76,43 +107,66 @@ export default function LineCard({ pledge, calculateOdds }: LineCardProps) {
               }}
             >
               <View style={styles.line}>
-                <Text>{lineObj.line}</Text>
+                {pledge.type === "person" && <Text>{lineObj.line}</Text>}
                 <Text>{lineObj.title}</Text>
               </View>
-              <View style={{ flexDirection: "row", marginRight: 10 }}>
-                <TouchableOpacity
-                  style={[
-                    styles.button,
-                    selected?.status === "Over" && {
-                      backgroundColor: "lightgray",
-                    },
-                  ]}
-                  onPress={() => toggleBet("Over")}
-                >
-                  <Text>Over</Text>
-                  {Array.isArray(lineObj.wagers) &&
-                    lineObj.wagers.length > 0 &&
-                    overOdds !== 1 && (
-                      <Text style={{ textAlign: "center" }}>{overOdds}x</Text>
-                    )}
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[
-                    styles.button,
-                    selected?.status === "Under" && {
-                      backgroundColor: "lightgray",
-                    },
-                  ]}
-                  onPress={() => toggleBet("Under")}
-                >
-                  <Text>Under</Text>
-                  {Array.isArray(lineObj.wagers) &&
-                    lineObj.wagers.length > 0 &&
-                    underOdds !== 1 && (
-                      <Text style={{ textAlign: "center" }}>{underOdds}x</Text>
-                    )}
-                </TouchableOpacity>
-              </View>
+
+              {pledge.type === "person" ? (
+                <View style={{ flexDirection: "row", marginRight: 10 }}>
+                  <TouchableOpacity
+                    style={[
+                      styles.button,
+                      selected?.status === "Over" && {
+                        backgroundColor: "gray",
+                      },
+                    ]}
+                    onPress={() => toggleBet("Over")}
+                  >
+                    <Text>Over</Text>
+                    {Array.isArray(lineObj.wagers) &&
+                      lineObj.wagers.length > 0 &&
+                      overOdds !== 1 && (
+                        <Text style={{ textAlign: "center" }}>{overOdds}x</Text>
+                      )}
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[
+                      styles.button,
+                      selected?.status === "Under" && {
+                        backgroundColor: "gray",
+                      },
+                    ]}
+                    onPress={() => toggleBet("Under")}
+                  >
+                    <Text>Under</Text>
+                    {Array.isArray(lineObj.wagers) &&
+                      lineObj.wagers.length > 0 &&
+                      underOdds !== 1 && (
+                        <Text style={{ textAlign: "center" }}>
+                          {underOdds}x
+                        </Text>
+                      )}
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <View style={styles.participantGrid}>
+                  {PARTICIPANTS.map((name) => (
+                    <TouchableOpacity
+                      key={name}
+                      style={[
+                        styles.participantButton,
+                        selected?.participant === name && {
+                          backgroundColor: "gray",
+                        },
+                      ]}
+                      onPress={() => handleSelectParticipant(name, lineObj)}
+                    >
+                      <Text style={{ textAlign: "center" }}>{name}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
             </View>
           );
         })}
@@ -148,11 +202,27 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   button: {
-    backgroundColor: "gray",
+    backgroundColor: "lightgray",
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 10,
     marginBottom: 10,
     marginLeft: 5,
+  },
+  participantGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "center",
+    marginHorizontal: 10,
+    marginTop: 10,
+  },
+  participantButton: {
+    backgroundColor: "lightgray",
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 10,
+    margin: 5,
+    minWidth: 80,
+    alignItems: "center",
   },
 });

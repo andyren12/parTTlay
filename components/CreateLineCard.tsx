@@ -15,12 +15,14 @@ import {
   doc,
   arrayUnion,
 } from "firebase/firestore";
+import DropDownPicker from "react-native-dropdown-picker";
 
 type LineCardProps = {
   pledge: {
     id: string;
     name: string;
     picture: string;
+    type: string;
     lines: any[];
   };
 };
@@ -30,6 +32,12 @@ export default function CreateLineCard({ pledge }: LineCardProps) {
   const [showInput, setShowInput] = useState(false);
   const [newTitle, setNewTitle] = useState("");
   const [newLine, setNewLine] = useState("");
+  const [open, setOpen] = useState(false);
+  const [value, setValue] = useState("simple");
+  const [items, setItems] = useState([
+    { label: "Simple Line", value: "simple" },
+    { label: "First to Complete", value: "firstToComplete" },
+  ]);
 
   useEffect(() => {
     if (Array.isArray(pledge.lines)) {
@@ -42,7 +50,7 @@ export default function CreateLineCard({ pledge }: LineCardProps) {
   };
 
   const completeLine = async () => {
-    if (!newTitle || !newLine) return;
+    if (!newTitle || (!newLine && pledge.type === "person")) return;
 
     try {
       const lineDoc = await addDoc(collection(db, "lines"), {
@@ -50,6 +58,7 @@ export default function CreateLineCard({ pledge }: LineCardProps) {
         line: parseFloat(newLine),
         wagers: [],
         propId: pledge.id,
+        type: value,
       });
 
       const propRef = doc(db, "props", pledge.id);
@@ -62,8 +71,9 @@ export default function CreateLineCard({ pledge }: LineCardProps) {
         {
           id: lineDoc.id,
           title: newTitle,
-          line: parseFloat(newLine),
+          line: parseFloat(newLine) ?? 0,
           wagers: [],
+          type: value,
         },
       ]);
 
@@ -99,7 +109,7 @@ export default function CreateLineCard({ pledge }: LineCardProps) {
               }}
             >
               <View style={styles.line}>
-                <Text>{lineObj.line}</Text>
+                {pledge.type === "person" && <Text>{lineObj.line}</Text>}
                 <Text>{lineObj.title}</Text>
               </View>
             </View>
@@ -107,6 +117,25 @@ export default function CreateLineCard({ pledge }: LineCardProps) {
 
         {showInput && (
           <View style={{ marginTop: 10, alignItems: "center" }}>
+            {pledge.type === "general" && (
+              <DropDownPicker
+                open={open}
+                value={value}
+                items={items}
+                setOpen={setOpen}
+                setValue={setValue}
+                setItems={setItems}
+                style={{
+                  width: 200,
+                  marginBottom: 10,
+                }}
+                dropDownContainerStyle={{
+                  width: 200,
+                }}
+                listMode="SCROLLVIEW"
+              />
+            )}
+
             <TextInput
               placeholder="Title"
               placeholderTextColor={"gray"}
@@ -115,14 +144,17 @@ export default function CreateLineCard({ pledge }: LineCardProps) {
               autoCapitalize="none"
               onChangeText={setNewTitle}
             />
-            <TextInput
-              placeholder="Line"
-              placeholderTextColor={"gray"}
-              style={styles.input}
-              keyboardType="numeric"
-              value={newLine}
-              onChangeText={setNewLine}
-            />
+            {value === "simple" && (
+              <TextInput
+                placeholder="Line"
+                placeholderTextColor={"gray"}
+                style={styles.input}
+                keyboardType="numeric"
+                value={newLine}
+                onChangeText={setNewLine}
+              />
+            )}
+
             <TouchableOpacity
               style={[styles.addButton, { backgroundColor: "green" }]}
               onPress={completeLine}

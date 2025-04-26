@@ -40,6 +40,7 @@ type Bet = {
   status: string;
   line: number;
   odds: number;
+  type: string;
 };
 
 export default function currentBets() {
@@ -123,31 +124,58 @@ export default function currentBets() {
       const lineData = lineSnap.data();
       const existingWagers = lineData.wagers || [];
 
-      const simulatedWagers = [
-        ...existingWagers,
-        {
-          amount: amountPerBet,
-          over: bet.status === "Over",
-        },
-      ];
+      if (bet.type === "simple") {
+        // Old simple bet payout logic
+        const simulatedWagers = [
+          ...existingWagers,
+          {
+            amount: amountPerBet,
+            over: bet.status === "Over",
+          },
+        ];
 
-      const overTotal = simulatedWagers
-        .filter((w) => w.over)
-        .reduce((sum, w) => sum + w.amount, 0);
+        const overTotal = simulatedWagers
+          .filter((w) => w.over)
+          .reduce((sum, w) => sum + w.amount, 0);
 
-      const underTotal = simulatedWagers
-        .filter((w) => !w.over)
-        .reduce((sum, w) => sum + w.amount, 0);
+        const underTotal = simulatedWagers
+          .filter((w) => !w.over)
+          .reduce((sum, w) => sum + w.amount, 0);
 
-      let odds = 0;
-      if (bet.status === "Over") {
-        odds = overTotal > 0 ? underTotal / overTotal : 0;
-      } else {
-        odds = underTotal > 0 ? overTotal / underTotal : 0;
+        let odds = 0;
+        if (bet.status === "Over") {
+          odds = overTotal > 0 ? underTotal / overTotal : 0;
+        } else {
+          odds = underTotal > 0 ? overTotal / underTotal : 0;
+        }
+
+        const payout = amountPerBet * odds;
+        totalPayout += payout;
+      } else if (bet.type === "firstToComplete") {
+        // New first to complete payout logic
+        const simulatedWagers = [
+          ...existingWagers,
+          {
+            amount: amountPerBet,
+            participant: bet.participant,
+          },
+        ];
+
+        const totalPool = simulatedWagers.reduce((sum, w) => sum + w.amount, 0);
+
+        const myTotal = simulatedWagers
+          .filter((w) => w.participant === bet.participant)
+          .reduce((sum, w) => sum + w.amount, 0);
+
+        const opponentTotal = totalPool - myTotal;
+
+        // odds = how much "other" money divided by "your" money
+        const odds = myTotal > 0 ? opponentTotal / myTotal : 0;
+
+        const payout = amountPerBet * (1 + odds);
+        // (1 + odds) because you also get your bet amount back
+        totalPayout += payout;
       }
-
-      const payout = amountPerBet * odds;
-      totalPayout += payout;
     }
 
     return totalPayout;
@@ -193,38 +221,70 @@ export default function currentBets() {
           if (!lineSnap.exists()) return;
           const wagerId = uuid.v4();
 
-          const lineWager = {
-            wagerId: wagerId,
-            name: user?.firstName,
-            userId: user?.uid,
-            amount: amountPerBet,
-            over: bet.status === "Over",
-          };
+          if (bet.type === "simple") {
+            // Simple over/under wager
+            const lineWager = {
+              wagerId: wagerId,
+              name: user?.firstName,
+              userId: user?.uid,
+              amount: amountPerBet,
+              over: bet.status === "Over",
+              type: bet.type,
+            };
 
-          const userWager = {
-            wagerId: wagerId,
-            lineId: bet.id,
-            propId: bet.propId,
-            amount: amountPerBet,
-            over: bet.status === "Over",
-          };
+            const userWager = {
+              wagerId: wagerId,
+              lineId: bet.id,
+              propId: bet.propId,
+              amount: amountPerBet,
+              over: bet.status === "Over",
+              type: bet.type,
+            };
 
-          await updateDoc(lineRef, {
-            wagers: arrayUnion(lineWager),
-          });
+            await updateDoc(lineRef, {
+              wagers: arrayUnion(lineWager),
+            });
 
-          const userRef = doc(db, "users", user?.uid);
-          console.log(userRef);
-          await updateDoc(userRef, {
-            currentWagers: arrayUnion(userWager),
-            balance: user?.balance - parseInt(betAmount),
-          });
+            const userRef = doc(db, "users", user?.uid);
+            await updateDoc(userRef, {
+              currentWagers: arrayUnion(userWager),
+              balance: user?.balance - parseInt(betAmount),
+            });
+          } else if (bet.type === "firstToComplete") {
+            // First to Complete wager
+            const lineWager = {
+              wagerId: wagerId,
+              name: user?.firstName,
+              userId: user?.uid,
+              amount: amountPerBet,
+              participant: bet.participant, // who they picked
+              type: bet.type,
+            };
+
+            const userWager = {
+              wagerId: wagerId,
+              lineId: bet.id,
+              propId: bet.propId,
+              amount: amountPerBet,
+              participant: bet.participant,
+              type: bet.type,
+            };
+
+            await updateDoc(lineRef, {
+              wagers: arrayUnion(lineWager),
+            });
+
+            const userRef = doc(db, "users", user?.uid);
+            await updateDoc(userRef, {
+              currentWagers: arrayUnion(userWager),
+              balance: user?.balance - parseInt(betAmount),
+            });
+          }
         })
       );
 
       setSelectedBet([]);
       router.back();
-
       Alert.alert("Success", "Your bets have been placed!");
     } catch (err) {
       console.error("Error placing bets:", err);

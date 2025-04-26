@@ -9,9 +9,19 @@ import {
   ScrollView,
 } from "react-native-gesture-handler";
 
+type liveBet = {
+  amount: number;
+  lineId: string;
+  propId: string;
+  wagerId: string;
+  type: "simple" | "firstToComplete";
+  over?: boolean;
+  participant?: string;
+};
+
 export default function LiveBets() {
   const { user, loading } = useAuth();
-  const [liveBets, setLiveBets] = useState([]);
+  const [liveBets, setLiveBets] = useState<liveBet[]>([]);
 
   useEffect(() => {
     if (loading || !user?.uid) return;
@@ -42,5 +52,6 @@ const styles = StyleSheet.create({
     width: "100%",
     height: "100%",
     padding: 16,
+    paddingBottom: 160,
   },
 });
