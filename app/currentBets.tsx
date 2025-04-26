@@ -302,7 +302,7 @@ export default function currentBets() {
             // Create message for first to complete
             message = `${user?.firstName} ${
               user?.lastName
-            } bet $${amountPerBet} on ${lineData.propName || bet.name} to be ${
+            } bet $${amountPerBet} on ${bet.participant || bet.name} to be ${
               lineData.title
             }`;
           }
