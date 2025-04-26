@@ -1,12 +1,13 @@
 import { useAuth } from "@/hooks/useAuth";
 import {
-  Button,
-  Image,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
+  Image,
   Alert,
+  Modal,
+  Pressable,
 } from "react-native";
 import { signOut } from "firebase/auth";
 import { auth, db } from "../../firebaseConfig";
@@ -14,10 +15,17 @@ import { router } from "expo-router";
 import { useState, useEffect } from "react";
 import * as ImagePicker from "expo-image-picker";
 import { doc, updateDoc } from "firebase/firestore";
+import { Ionicons } from "@expo/vector-icons";
+import {
+  GestureHandlerRootView,
+  ScrollView,
+} from "react-native-gesture-handler";
+import Feed from "../feed";
 
 export default function HomeScreen() {
   const { user, loading } = useAuth();
   const [profileImage, setProfileImage] = useState<string | null>(null);
+  const [modalVisible, setModalVisible] = useState(false);
 
   useEffect(() => {
     if (user?.profilePicture) {
@@ -49,7 +57,6 @@ export default function HomeScreen() {
       );
 
       const { url } = await res.json();
-
       const fileBlob = await (await fetch(asset.uri)).blob();
 
       const uploadRes = await fetch(url, {
@@ -58,15 +65,11 @@ export default function HomeScreen() {
         body: fileBlob,
       });
 
-      if (!uploadRes.ok) {
-        throw new Error("Failed to upload image to S3");
-      }
+      if (!uploadRes.ok) throw new Error("Failed to upload image to S3");
 
       const imageUrl = url.split("?")[0];
       setProfileImage(imageUrl);
-      console.log(imageUrl);
 
-      // Step 3: Save image URL to Firestore
       const userId = auth.currentUser?.uid;
       if (userId) {
         const userRef = doc(db, "users", userId);
@@ -81,7 +84,14 @@ export default function HomeScreen() {
   if (loading) return null;
 
   return (
-    <View style={styles.main}>
+    <View style={styles.container}>
+      {/* Header with ellipsis */}
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => setModalVisible(true)}>
+          <Ionicons name="ellipsis-vertical" size={24} color="black" />
+        </TouchableOpacity>
+      </View>
+
       <TouchableOpacity onPress={pickAndUploadImage}>
         <Image
           source={
@@ -93,41 +103,118 @@ export default function HomeScreen() {
         />
       </TouchableOpacity>
 
-      <Text>
+      <Text style={styles.nameText}>
         {user?.firstName} {user?.lastName}
       </Text>
 
-      <Button
-        title="Sign Out"
-        onPress={() => {
-          signOut(auth);
-          router.replace("/authScreen");
-        }}
-      />
-
-      <View>
-        <TouchableOpacity onPress={() => router.push("/createLines")}>
-          <Text>Create Lines</Text>
+      <View style={styles.buttonContainer}>
+        <TouchableOpacity
+          style={styles.actionButton}
+          onPress={() => router.push("/createLines")}
+        >
+          <Text style={styles.actionText}>Create Lines</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => router.push("/completeLines")}>
-          <Text>Complete Lines</Text>
+
+        <TouchableOpacity
+          style={styles.actionButton}
+          onPress={() => router.push("/completeLines")}
+        >
+          <Text style={styles.actionText}>Complete Lines</Text>
         </TouchableOpacity>
       </View>
+
+      <Feed />
+
+      <Modal
+        transparent
+        animationType="fade"
+        visible={modalVisible}
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <Pressable
+          style={styles.modalOverlay}
+          onPress={() => setModalVisible(false)}
+        >
+          <View style={styles.modalContainer}>
+            <TouchableOpacity
+              style={styles.signOutButton}
+              onPress={() => {
+                signOut(auth);
+                setModalVisible(false);
+                router.replace("/authScreen");
+              }}
+            >
+              <Text style={styles.signOutText}>Sign Out</Text>
+            </TouchableOpacity>
+          </View>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  main: {
+  container: {
     height: "100%",
     alignItems: "center",
-    justifyContent: "center",
+    paddingTop: 100,
+    backgroundColor: "#fdfdfd",
+  },
+  header: {
+    position: "absolute",
+    top: 60,
+    right: 20,
+    zIndex: 1,
   },
   profileImage: {
-    width: 120,
-    height: 120,
+    width: 100,
+    height: 100,
     borderRadius: 60,
     backgroundColor: "#eee",
     marginBottom: 16,
+  },
+  nameText: {
+    fontSize: 22,
+    fontWeight: "600",
+    marginBottom: 30,
+  },
+  buttonContainer: {
+    flexDirection: "row",
+    width: "80%",
+    gap: 15,
+  },
+  actionButton: {
+    backgroundColor: "#3498db",
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 10,
+    alignItems: "center",
+  },
+  actionText: {
+    color: "white",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.3)",
+    justifyContent: "flex-end",
+  },
+  modalContainer: {
+    backgroundColor: "white",
+    padding: 20,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+  },
+  signOutButton: {
+    backgroundColor: "#e74c3c",
+    paddingVertical: 12,
+    borderRadius: 10,
+    alignItems: "center",
+  },
+  signOutText: {
+    color: "white",
+    fontWeight: "600",
+    fontSize: 16,
   },
 });

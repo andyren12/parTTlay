@@ -22,7 +22,15 @@ import {
 import { useRef, useState, useEffect } from "react";
 import { useRecoilState } from "recoil";
 import { router } from "expo-router";
-import { arrayUnion, doc, getDoc, updateDoc } from "firebase/firestore";
+import {
+  addDoc,
+  arrayUnion,
+  collection,
+  doc,
+  getDoc,
+  serverTimestamp,
+  updateDoc,
+} from "firebase/firestore";
 import { db } from "@/firebaseConfig";
 import uuid from "react-native-uuid";
 
@@ -37,10 +45,11 @@ type Bet = {
   name: string;
   picture: string;
   title: string;
-  status: string;
-  line: number;
-  odds: number;
-  type: string;
+  type: "simple" | "firstToComplete";
+  status?: "Over" | "Under";
+  line?: number;
+  odds?: number;
+  participant?: string;
 };
 
 export default function currentBets() {
@@ -219,7 +228,12 @@ export default function currentBets() {
           const lineRef = doc(db, "lines", bet.id);
           const lineSnap = await getDoc(lineRef);
           if (!lineSnap.exists()) return;
+          const lineData = lineSnap.data();
           const wagerId = uuid.v4();
+
+          const userRef = doc(db, "users", user?.uid);
+
+          let message = "";
 
           if (bet.type === "simple") {
             // Simple over/under wager
@@ -245,11 +259,17 @@ export default function currentBets() {
               wagers: arrayUnion(lineWager),
             });
 
-            const userRef = doc(db, "users", user?.uid);
             await updateDoc(userRef, {
               currentWagers: arrayUnion(userWager),
               balance: user?.balance - parseInt(betAmount),
             });
+
+            // Create message for simple bet
+            message = `${user?.firstName} ${
+              user?.lastName
+            } bet $${amountPerBet} on ${lineData.propName || bet.name} ${
+              bet.status
+            } ${lineData.line} ${lineData.title}`;
           } else if (bet.type === "firstToComplete") {
             // First to Complete wager
             const lineWager = {
@@ -257,7 +277,7 @@ export default function currentBets() {
               name: user?.firstName,
               userId: user?.uid,
               amount: amountPerBet,
-              participant: bet.participant, // who they picked
+              participant: bet.participant,
               type: bet.type,
             };
 
@@ -274,10 +294,24 @@ export default function currentBets() {
               wagers: arrayUnion(lineWager),
             });
 
-            const userRef = doc(db, "users", user?.uid);
             await updateDoc(userRef, {
               currentWagers: arrayUnion(userWager),
               balance: user?.balance - parseInt(betAmount),
+            });
+
+            // Create message for first to complete
+            message = `${user?.firstName} ${
+              user?.lastName
+            } bet $${amountPerBet} on ${lineData.propName || bet.name} to be ${
+              lineData.title
+            }`;
+          }
+
+          // Save to feed
+          if (message) {
+            await addDoc(collection(db, "feed"), {
+              message,
+              createdAt: serverTimestamp(),
             });
           }
         })
