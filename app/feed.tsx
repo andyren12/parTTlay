@@ -5,19 +5,23 @@ import {
   StyleSheet,
   FlatList,
   ActivityIndicator,
+  Image,
 } from "react-native";
 import { db } from "@/firebaseConfig";
 import { collection, onSnapshot, orderBy, query } from "firebase/firestore";
+import { useAuth } from "@/hooks/useAuth";
 
 type FeedItem = {
   id: string;
   message: string;
+  picture: string;
   createdAt: any;
 };
 
 export default function Feed() {
   const [feed, setFeed] = useState<FeedItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
 
   function timeAgo(timestamp: any): string {
     if (!timestamp) return "";
@@ -63,10 +67,21 @@ export default function Feed() {
       <FlatList
         data={feed}
         keyExtractor={(item) => item.id}
+        contentContainerStyle={{ paddingBottom: 120 }}
         renderItem={({ item }) => (
           <View style={styles.card}>
-            <Text>{item.message}</Text>
-            <Text style={styles.time}>{timeAgo(item.createdAt)}</Text>
+            <Image
+              source={
+                item.picture
+                  ? { uri: item.picture }
+                  : require("../assets/images/default-profile.png")
+              }
+              style={styles.profilePicture}
+            />
+            <View style={styles.textContainer}>
+              <Text style={styles.message}>{item.message}</Text>
+              <Text style={styles.time}>{timeAgo(item.createdAt)}</Text>
+            </View>
           </View>
         )}
       />
@@ -76,13 +91,14 @@ export default function Feed() {
 
 const styles = StyleSheet.create({
   container: {
-    paddingTop: 60,
+    paddingTop: 20,
     paddingHorizontal: 16,
     backgroundColor: "#fdfdfd",
     width: "100%",
-    height: "100%",
+    flex: 1,
   },
   card: {
+    flexDirection: "row",
     backgroundColor: "#fff",
     borderRadius: 10,
     padding: 12,
@@ -91,18 +107,23 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowOffset: { width: 0, height: 2 },
     elevation: 3,
+    alignItems: "flex-start",
   },
-  title: {
-    fontWeight: "600",
-    fontSize: 16,
-    marginBottom: 4,
+  profilePicture: {
+    height: 50,
+    width: 50,
+    borderRadius: 50,
+    marginRight: 10, // add spacing between image and text
   },
-  amount: {
-    fontWeight: "bold",
-    color: "#2ecc71",
+  textContainer: {
+    flex: 1,
+  },
+  message: {
+    flexShrink: 1,
+    fontSize: 14,
   },
   time: {
-    marginTop: 6,
+    marginTop: 4,
     color: "gray",
     fontSize: 12,
   },

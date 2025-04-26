@@ -310,6 +310,7 @@ export default function currentBets() {
           // Save to feed
           if (message) {
             await addDoc(collection(db, "feed"), {
+              picture: user?.profilePicture,
               message,
               createdAt: serverTimestamp(),
             });
